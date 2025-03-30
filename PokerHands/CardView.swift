@@ -3,7 +3,8 @@ import SwiftUI
 struct CardView: View {
     let card: Card
     let isSelected: Bool
-    let isSatisfied: Bool
+    let isRowSatisfied: Bool
+    let isColumnSatisfied: Bool
     
     var body: some View {
         VStack(spacing: 4) {
@@ -20,19 +21,73 @@ struct CardView: View {
         .background(Color(hex: "efefef"))
         .cornerRadius(8)
         .shadow(radius: 2)
-        .overlay(
+        .modifier(SelectionOverlay(isSelected: isSelected))
+        .modifier(RowHighlightOverlay(isRowSatisfied: isRowSatisfied, isColumnSatisfied: isColumnSatisfied))
+        .modifier(ColumnHighlightOverlay(isColumnSatisfied: isColumnSatisfied, isRowSatisfied: isRowSatisfied))
+    }
+}
+
+struct SelectionOverlay: ViewModifier {
+    let isSelected: Bool
+    
+    func body(content: Content) -> some View {
+        content.overlay(
             RoundedRectangle(cornerRadius: 8)
                 .stroke(isSelected ? Color.blue : Color.gray.opacity(0.3), lineWidth: isSelected ? 3 : 1)
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(isSatisfied ? Color(hex: "4CAF50").opacity(0.5) : Color.clear, lineWidth: 6)
-                .blur(radius: 3)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(isSatisfied ? Color(hex: "4CAF50") : Color.clear, lineWidth: 2)
-        )
+    }
+}
+
+struct RowHighlightOverlay: ViewModifier {
+    let isRowSatisfied: Bool
+    let isColumnSatisfied: Bool
+    
+    func body(content: Content) -> some View {
+        content
+            .overlay(
+                Group {
+                    if isRowSatisfied {
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color(hex: "4CAF50").opacity(isColumnSatisfied ? 1.1 : 1.0), lineWidth: 6)
+                            .blur(radius: isColumnSatisfied ? 5 : 3)
+                            .padding(isColumnSatisfied ? 4 : 0)
+                    }
+                }
+            )
+            .overlay(
+                Group {
+                    if isRowSatisfied && !isColumnSatisfied {
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color(hex: "4CAF50"), lineWidth: 2)
+                    }
+                }
+            )
+    }
+}
+
+struct ColumnHighlightOverlay: ViewModifier {
+    let isColumnSatisfied: Bool
+    let isRowSatisfied: Bool
+    
+    func body(content: Content) -> some View {
+        content
+            .overlay(
+                Group {
+                    if isColumnSatisfied {
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color(hex: "BA68C8").opacity(1.0), lineWidth: 6)
+                            .blur(radius: 3)
+                    }
+                }
+            )
+            .overlay(
+                Group {
+                    if isColumnSatisfied {
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color(hex: "BA68C8"), lineWidth: isRowSatisfied ? 1 : 2)
+                    }
+                }
+            )
     }
 }
 
@@ -85,10 +140,10 @@ struct EmptyCardView: View {
 
 #Preview {
     VStack(spacing: 20) {
-        CardView(card: Card(suit: .hearts, rank: .ace), isSelected: false, isSatisfied: false)
-        CardView(card: Card(suit: .spades, rank: .king), isSelected: false, isSatisfied: false)
-        CardView(card: Card(suit: .diamonds, rank: .queen), isSelected: false, isSatisfied: false)
-        CardView(card: Card(suit: .clubs, rank: .jack), isSelected: false, isSatisfied: false)
+        CardView(card: Card(suit: .hearts, rank: .ace), isSelected: false, isRowSatisfied: false, isColumnSatisfied: false)
+        CardView(card: Card(suit: .spades, rank: .king), isSelected: false, isRowSatisfied: true, isColumnSatisfied: false)
+        CardView(card: Card(suit: .diamonds, rank: .queen), isSelected: false, isRowSatisfied: false, isColumnSatisfied: true)
+        CardView(card: Card(suit: .clubs, rank: .jack), isSelected: false, isRowSatisfied: true, isColumnSatisfied: true)
         
         Divider()
         

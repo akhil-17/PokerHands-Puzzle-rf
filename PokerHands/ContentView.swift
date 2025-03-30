@@ -17,7 +17,7 @@ struct RowConditionsView: View {
             LazyVGrid(columns: Array(repeating: GridItem(.fixed(60), spacing: 8), count: 5), alignment: .leading, spacing: 8) {
                 ForEach(0..<5) { index in
                     TextCardTop(text: formatCondition(conditions[index]))
-                        .foregroundColor(satisfiedRows.contains(index) ? .green : .white)
+                        .foregroundColor(satisfiedRows.contains(index) ? Color(hex: "4CAF50") : .white)
                         .animation(.easeInOut, value: satisfiedRows.contains(index))
                 }
             }
@@ -27,32 +27,36 @@ struct RowConditionsView: View {
     
     private func formatCondition(_ condition: CardCondition) -> String {
         switch condition {
-        case .allSameSuit(let suit):
-            switch suit {
-            case .hearts: return "All ♥"
-            case .diamonds: return "All Diamonds"
-            case .clubs: return "All Clubs"
-            case .spades: return "All Spades"
-            }
-        case .ascending:
-            return "Low to high"
+        case .allHearts:
+            return "All Hearts"
+        case .threeQueens:
+            return "3 Queens"
+        case .ascendingSequence:
+            return "2-3-4-5-6"
+        case .fourSevens:
+            return "4 Sevens"
+        case .allFaceCards:
+            return "All Face Cards"
+        case .threeOfAKind:
+            return "3 of a kind"
+        case .flush:
+            return "Flush"
+        case .straight:
+            return "Straight"
+        case .pair:
+            return "Pair"
+        case .allSameSuit:
+            return "All Same Suit"
         case .descending:
             return "High to Low"
-        case .sumEquals(let value):
-            return "Sum=\(value)"
-        case .allFaceCards:
-            return "All face cards"
-        case .pokerHand(let hand):
-            switch hand {
-            case .pair: return "Pair"
-            case .threeOfAKind: return "3 of a kind"
-            case .straight: return "Straight"
-            case .flush: return "Flush"
-            case .fullHouse: return "Full House"
-            case .fourOfAKind: return "4 of a kind"
-            }
-        case .allSameRank(let rank):
-            return "All \(rank.rawValue)s"
+        case .sumEquals:
+            return "Sum=15"
+        case .pokerHand:
+            return "3 of a kind"
+        case .allSameRank:
+            return "All Same Rank"
+        case .royalCourt:
+            return "Royal Court"
         }
     }
 }
@@ -66,7 +70,7 @@ struct ColumnConditionsView: View {
         LazyVGrid(columns: [GridItem(.fixed(60))], spacing: 8) {
             ForEach(0..<5) { index in
                 TextCardLeft(text: formatCondition(conditions[index]))
-                    .foregroundColor(satisfiedColumns.contains(index) ? .green : .white)
+                    .foregroundColor(satisfiedColumns.contains(index) ? Color(hex: "BA68C8") : .white)
                     .animation(.easeInOut, value: satisfiedColumns.contains(index))
             }
         }
@@ -75,32 +79,36 @@ struct ColumnConditionsView: View {
     
     private func formatCondition(_ condition: CardCondition) -> String {
         switch condition {
-        case .allSameSuit(let suit):
-            switch suit {
-            case .hearts: return "All ♥"
-            case .diamonds: return "All Diamonds"
-            case .clubs: return "All Clubs"
-            case .spades: return "All Spades"
-            }
-        case .ascending:
-            return "Low to high"
+        case .allHearts:
+            return "All Hearts"
+        case .threeQueens:
+            return "3 Queens"
+        case .ascendingSequence:
+            return "2-3-4-5-6"
+        case .fourSevens:
+            return "4 Sevens"
+        case .allFaceCards:
+            return "All Face Cards"
+        case .threeOfAKind:
+            return "3 of a kind"
+        case .flush:
+            return "Flush"
+        case .straight:
+            return "Straight"
+        case .pair:
+            return "Pair"
+        case .allSameSuit:
+            return "All Same Suit"
         case .descending:
             return "High to Low"
-        case .sumEquals(let value):
-            return "Sum=\(value)"
-        case .allFaceCards:
-            return "All face cards"
-        case .pokerHand(let hand):
-            switch hand {
-            case .pair: return "Pair"
-            case .threeOfAKind: return "3 of a kind"
-            case .straight: return "Straight"
-            case .flush: return "Flush"
-            case .fullHouse: return "Full House"
-            case .fourOfAKind: return "4 of a kind"
-            }
-        case .allSameRank(let rank):
-            return "All \(rank.rawValue)s"
+        case .sumEquals:
+            return "Sum=15"
+        case .pokerHand:
+            return "3 of a kind"
+        case .allSameRank:
+            return "All Same Rank"
+        case .royalCourt:
+            return "Royal Court"
         }
     }
 }
@@ -120,11 +128,12 @@ struct CardGridView: View {
                 ForEach(0..<5) { col in
                     Group {
                         if let card = cards[row][col] {
-                            let isSatisfied = isCardSatisfyingCondition(row: row, col: col)
+                            let (isRowSatisfied, isColumnSatisfied) = isCardSatisfyingConditions(row: row, col: col)
                             CardView(
                                 card: card,
                                 isSelected: selectedCard.map { $0 == (row, col) } ?? false,
-                                isSatisfied: isSatisfied
+                                isRowSatisfied: isRowSatisfied,
+                                isColumnSatisfied: isColumnSatisfied
                             )
                         } else {
                             EmptyCardView(
@@ -133,7 +142,7 @@ struct CardGridView: View {
                             )
                         }
                     }
-                    .contentShape(Rectangle()) // Make the entire area tappable
+                    .contentShape(Rectangle())
                     .onTapGesture {
                         print("Tapped position: row=\(row), col=\(col)")
                         onCardTap(row, col)
@@ -144,30 +153,43 @@ struct CardGridView: View {
         .padding(.trailing, 8)
     }
     
-    private func isCardSatisfyingCondition(row: Int, col: Int) -> Bool {
+    private func isCardSatisfyingConditions(row: Int, col: Int) -> (row: Bool, column: Bool) {
+        var isRowSatisfied = false
+        var isColumnSatisfied = false
+        
         // Check if the card is part of a satisfied row condition
         if satisfiedRows.contains(row) {
             let rowCards = cards[row]
             let satisfyingIndices = viewModel.getSatisfyingCards(for: viewModel.rowConditions[row], in: rowCards)
-            return satisfyingIndices.contains(col)
+            if satisfyingIndices.contains(col) {
+                print("Card at row \(row), col \(col) satisfies row condition")
+                isRowSatisfied = true
+            }
         }
         
         // Check if the card is part of a satisfied column condition
         if satisfiedColumns.contains(col) {
             let columnCards = cards.map { $0[col] }
             let satisfyingIndices = viewModel.getSatisfyingCards(for: viewModel.columnConditions[col], in: columnCards)
-            return satisfyingIndices.contains(row)
+            if satisfyingIndices.contains(row) {
+                print("Card at row \(row), col \(col) satisfies column condition")
+                isColumnSatisfied = true
+            }
         }
         
-        return false
+        return (isRowSatisfied, isColumnSatisfied)
     }
 }
 
 struct ContentView: View {
-    @StateObject private var viewModel = CardGridViewModel()
+    @StateObject private var viewModel: CardGridViewModel
     @State private var selectedCard: (row: Int, col: Int)? = nil
     @State private var satisfiedRows: Set<Int> = []
     @State private var satisfiedColumns: Set<Int> = []
+    
+    init(viewModel: CardGridViewModel = CardGridViewModel()) {
+        _viewModel = StateObject(wrappedValue: viewModel)
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -178,15 +200,15 @@ struct ContentView: View {
                 
                 VStack(spacing: 0) {
                     RowConditionsView(
-                        conditions: viewModel.columnConditions,
-                        satisfiedRows: satisfiedColumns,
+                        conditions: viewModel.rowConditions,
+                        satisfiedRows: satisfiedRows,
                         viewModel: viewModel
                     )
                     
                     HStack(spacing: 0) {
                         ColumnConditionsView(
-                            conditions: viewModel.rowConditions,
-                            satisfiedColumns: satisfiedRows,
+                            conditions: viewModel.columnConditions,
+                            satisfiedColumns: satisfiedColumns,
                             viewModel: viewModel
                         )
                         
@@ -296,6 +318,12 @@ struct ContentView: View {
     }
 }
 
-#Preview {
-    ContentView()
+#Preview("Unsolved State") {
+    // Create a ContentView with a shuffled viewModel
+    ContentView(viewModel: CardGridViewModel(shuffleCards: true))
+}
+
+#Preview("Solved State") {
+    // Create a ContentView with a solved viewModel
+    ContentView(viewModel: CardGridViewModel(shuffleCards: false))
 }
