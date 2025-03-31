@@ -14,7 +14,7 @@ struct TextCardLeft: View {
             .lineLimit(nil)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: 36)
-            .frame(width: 40, height: 80, alignment: .trailing)
+            .frame(width: 36, height: 80, alignment: .trailing)
     }
 }
 

@@ -75,7 +75,7 @@ struct ColumnConditionsView: View {
                     .animation(.easeInOut, value: satisfiedColumns.contains(index))
             }
         }
-        .padding(.leading, 42)
+        .padding(.leading, 38)
         .padding(.bottom, 0)
     }
     
@@ -259,7 +259,7 @@ struct ContentView: View {
                             viewModel: viewModel
                         )
                         
-                        HStack(spacing: 0) {
+                        HStack(spacing: -4) {
                             // Row conditions on the left
                             RowConditionsView(
                                 conditions: viewModel.rowConditions,
