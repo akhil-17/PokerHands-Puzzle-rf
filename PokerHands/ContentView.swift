@@ -250,7 +250,7 @@ private struct CardCellView: View {
         
         // Check if the card is part of a satisfied row condition
         if satisfiedRows.contains(row) {
-            let rowCards = viewModel.cards[row]
+            let rowCards = viewModel.solutionCards[row]
             let satisfyingIndices = viewModel.getSatisfyingCards(for: viewModel.rowConditions[row], in: rowCards)
             if satisfyingIndices.contains(col) {
                 print("Card at row \(row), col \(col) satisfies row condition")
@@ -260,7 +260,7 @@ private struct CardCellView: View {
         
         // Check if the card is part of a satisfied column condition
         if satisfiedColumns.contains(col) {
-            let columnCards = viewModel.cards.map { $0[col] }
+            let columnCards = viewModel.solutionCards.map { $0[col] }
             let satisfyingIndices = viewModel.getSatisfyingCards(for: viewModel.columnConditions[col], in: columnCards)
             if satisfyingIndices.contains(row) {
                 print("Card at row \(row), col \(col) satisfies column condition")
@@ -315,6 +315,54 @@ struct CustomNavigationBar: View {
     }
 }
 
+struct SolutionPreviewOverlay: View {
+    let viewModel: CardGridViewModel
+    
+    var body: some View {
+        ZStack {
+            // Semi-transparent background
+            Color.black.opacity(0.7)
+                .ignoresSafeArea()
+            
+            HStack {
+                Spacer()
+                
+                VStack(spacing: 0) {
+                    // Column conditions at the top
+                    ColumnConditionsView(
+                        conditions: viewModel.columnConditions,
+                        satisfiedColumns: Set(0..<5), // All columns are satisfied in solution
+                        viewModel: viewModel
+                    )
+                    
+                    HStack(spacing: -4) {
+                        // Row conditions on the left
+                        RowConditionsView(
+                            conditions: viewModel.rowConditions,
+                            satisfiedRows: Set(0..<5), // All rows are satisfied in solution
+                            viewModel: viewModel
+                        )
+                        
+                        // The grid
+                        CardGridView(
+                            cards: viewModel.solutionCards,
+                            emptyCardVariants: viewModel.emptyCardVariants,
+                            selectedCard: nil,
+                            onCardTap: { _, _ in },
+                            satisfiedRows: Set(0..<5),
+                            satisfiedColumns: Set(0..<5),
+                            viewModel: viewModel
+                        )
+                    }
+                }
+                .padding(.top, 6) // Add 6 points of top padding to shift the grid down
+                
+                Spacer()
+            }
+        }
+    }
+}
+
 struct CustomBottomNavigationBar: View {
     let onUndoTap: () -> Void
     let onRedoTap: () -> Void
@@ -322,6 +370,8 @@ struct CustomBottomNavigationBar: View {
     let canUndo: Bool
     let canRedo: Bool
     let canReset: Bool
+    let onSolutionPreviewPress: () -> Void
+    let onSolutionPreviewRelease: () -> Void
     
     var body: some View {
         HStack {
@@ -365,13 +415,22 @@ struct CustomBottomNavigationBar: View {
             
             // Center button
             Button(action: {}) {
-                Image(systemName: "checkmark.circle.fill")
+                Image(systemName: "eye.fill")
                     .font(.system(size: 24, weight: .semibold))
                     .foregroundColor(.white)
                     .frame(width: 56, height: 56)
                     .background(Color(hex: "333333"))
                     .clipShape(Circle())
             }
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in
+                        onSolutionPreviewPress()
+                    }
+                    .onEnded { _ in
+                        onSolutionPreviewRelease()
+                    }
+            )
             
             Spacer()
             
@@ -394,7 +453,7 @@ struct CustomBottomNavigationBar: View {
                 }
                 
                 Button(action: {}) {
-                    Image(systemName: "arrow.clockwise")
+                    Image(systemName: "gearshape.fill")
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundColor(.white)
                         .frame(width: 56, height: 56)
@@ -436,6 +495,7 @@ struct MainView: View {
     @State private var currentPuzzleIndex = 0
     @StateObject private var moveHistoryViewModel = MoveHistoryViewModel()
     @StateObject private var cardGridViewModel = CardGridViewModel()
+    @State private var isShowingSolution = false
     
     private let puzzles = [
         (name: "Prototype puzzle", view: { moveHistoryViewModel, cardGridViewModel in AnyView(PokerHandsView(viewModel: cardGridViewModel, moveHistoryViewModel: moveHistoryViewModel)) }),
@@ -456,55 +516,67 @@ struct MainView: View {
     
     var body: some View {
         GeometryReader { geometry in
-            VStack(spacing: 0) {
-                CustomNavigationBar(title: puzzles[currentPuzzleIndex].name, onPreviousTap: navigateToPreviousPuzzle, onNextTap: navigateToNextPuzzle)
-                    .safeAreaInset(edge: .top) {
+            ZStack {
+                VStack(spacing: 0) {
+                    CustomNavigationBar(title: puzzles[currentPuzzleIndex].name, onPreviousTap: navigateToPreviousPuzzle, onNextTap: navigateToNextPuzzle)
+                        .safeAreaInset(edge: .top) {
+                            Color.clear.frame(height: 0)
+                        }
+                    
+                    Spacer()
+                    
+                    if currentPuzzleIndex == 0 {
+                        PokerHandsView(viewModel: cardGridViewModel, moveHistoryViewModel: moveHistoryViewModel)
+                    } else {
+                        puzzles[currentPuzzleIndex].view(moveHistoryViewModel, cardGridViewModel)
+                    }
+                    
+                    Spacer()
+                    
+                    CustomBottomNavigationBar(
+                        onUndoTap: {
+                            print("Undo button tapped")
+                            if let lastMove = moveHistoryViewModel.undoLastMove() {
+                                print("Undoing move from (\(lastMove.from.row), \(lastMove.from.col)) to (\(lastMove.to.row), \(lastMove.to.col))")
+                                // Restore both cards to their original positions
+                                cardGridViewModel.cards[lastMove.from.row][lastMove.from.col] = lastMove.fromCard
+                                cardGridViewModel.cards[lastMove.to.row][lastMove.to.col] = lastMove.toCard
+                            }
+                        },
+                        onRedoTap: {
+                            print("Redo button tapped")
+                            if let lastMove = moveHistoryViewModel.redoLastMove() {
+                                print("Redoing move from (\(lastMove.from.row), \(lastMove.from.col)) to (\(lastMove.to.row), \(lastMove.to.col))")
+                                // Restore both cards to their swapped positions
+                                cardGridViewModel.cards[lastMove.from.row][lastMove.from.col] = lastMove.toCard
+                                cardGridViewModel.cards[lastMove.to.row][lastMove.to.col] = lastMove.fromCard
+                            }
+                        },
+                        onResetTap: {
+                            print("Reset button tapped")
+                            // Reset the puzzle to its initial state
+                            cardGridViewModel.resetToInitialState()
+                            // Clear the move history
+                            moveHistoryViewModel.moveHistory.removeAll()
+                            moveHistoryViewModel.redoHistory.removeAll()
+                        },
+                        canUndo: canUndo,
+                        canRedo: moveHistoryViewModel.canRedo,
+                        canReset: canReset,
+                        onSolutionPreviewPress: {
+                            isShowingSolution = true
+                        },
+                        onSolutionPreviewRelease: {
+                            isShowingSolution = false
+                        }
+                    )
+                    .safeAreaInset(edge: .bottom) {
                         Color.clear.frame(height: 0)
                     }
-                
-                Spacer()
-                
-                if currentPuzzleIndex == 0 {
-                    PokerHandsView(viewModel: cardGridViewModel, moveHistoryViewModel: moveHistoryViewModel)
-                } else {
-                    puzzles[currentPuzzleIndex].view(moveHistoryViewModel, cardGridViewModel)
                 }
                 
-                Spacer()
-                
-                CustomBottomNavigationBar(
-                    onUndoTap: {
-                        print("Undo button tapped")
-                        if let lastMove = moveHistoryViewModel.undoLastMove() {
-                            print("Undoing move from (\(lastMove.from.row), \(lastMove.from.col)) to (\(lastMove.to.row), \(lastMove.to.col))")
-                            // Restore both cards to their original positions
-                            cardGridViewModel.cards[lastMove.from.row][lastMove.from.col] = lastMove.fromCard
-                            cardGridViewModel.cards[lastMove.to.row][lastMove.to.col] = lastMove.toCard
-                        }
-                    },
-                    onRedoTap: {
-                        print("Redo button tapped")
-                        if let lastMove = moveHistoryViewModel.redoLastMove() {
-                            print("Redoing move from (\(lastMove.from.row), \(lastMove.from.col)) to (\(lastMove.to.row), \(lastMove.to.col))")
-                            // Restore both cards to their swapped positions
-                            cardGridViewModel.cards[lastMove.from.row][lastMove.from.col] = lastMove.toCard
-                            cardGridViewModel.cards[lastMove.to.row][lastMove.to.col] = lastMove.fromCard
-                        }
-                    },
-                    onResetTap: {
-                        print("Reset button tapped")
-                        // Reset the puzzle to its initial state
-                        cardGridViewModel.resetToInitialState()
-                        // Clear the move history
-                        moveHistoryViewModel.moveHistory.removeAll()
-                        moveHistoryViewModel.redoHistory.removeAll()
-                    },
-                    canUndo: canUndo,
-                    canRedo: moveHistoryViewModel.canRedo,
-                    canReset: canReset
-                )
-                .safeAreaInset(edge: .bottom) {
-                    Color.clear.frame(height: 0)
+                if isShowingSolution {
+                    SolutionPreviewOverlay(viewModel: cardGridViewModel)
                 }
             }
         }

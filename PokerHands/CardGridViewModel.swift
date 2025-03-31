@@ -34,10 +34,14 @@ class CardGridViewModel: ObservableObject {
     @Published var columnConditions: [CardCondition] = []
     private var initialCards: [[Card?]] = [] // Store the initial state
     
+    // Make solutionCards a published property with default value
+    @Published var solutionCards: [[Card?]] = Array(repeating: Array(repeating: nil, count: 5), count: 5)
+    
     init(shuffleCards: Bool = true) {
         setupPrototypePuzzle()
         // Store the initial state before shuffling
         initialCards = cards
+        solutionCards = initialCards
         if shuffleCards {
             shuffleInitialState()
         }
@@ -229,7 +233,7 @@ class CardGridViewModel: ObservableObject {
         }
         
         // Place cards in initial solved state for preview
-        cards = [
+        let initialCards = [
             // Row 0: All Spades
             [Card(suit: .spades, rank: .ace),
              Card(suit: .spades, rank: .king),
@@ -265,6 +269,10 @@ class CardGridViewModel: ObservableObject {
              Card(suit: .clubs, rank: .six),
              Card(suit: .clubs, rank: .seven)]
         ]
+        
+        // Set both cards and solutionCards to the initial state
+        cards = initialCards
+        solutionCards = initialCards
         
         // Initialize empty card variants
         emptyCardVariants = Array(repeating: Array(repeating: .empty, count: 5), count: 5)
