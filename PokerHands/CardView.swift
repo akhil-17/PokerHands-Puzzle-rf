@@ -50,7 +50,7 @@ struct RowHighlightOverlay: ViewModifier {
                 Group {
                     if isRowSatisfied && !isColumnSatisfied {
                         RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color(hex: "BA68C8").opacity(0.5), lineWidth: 6)
+                            .stroke(Color(hex: "4CAF50").opacity(0.5), lineWidth: 6)
                             .blur(radius: 2)
                     }
                 }
@@ -59,7 +59,7 @@ struct RowHighlightOverlay: ViewModifier {
                 Group {
                     if isRowSatisfied && !isColumnSatisfied {
                         RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color(hex: "BA68C8"), lineWidth: 2)
+                            .stroke(Color(hex: "4CAF50"), lineWidth: 2)
                     }
                 }
             )
