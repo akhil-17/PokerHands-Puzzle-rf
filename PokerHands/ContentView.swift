@@ -7,6 +7,23 @@
 
 import SwiftUI
 
+class MoveHistoryViewModel: ObservableObject {
+    @Published var moveHistory: [(from: (row: Int, col: Int), to: (row: Int, col: Int), fromCard: Card?, toCard: Card?)] = []
+    
+    func addMove(from: (row: Int, col: Int), to: (row: Int, col: Int), fromCard: Card?, toCard: Card?) {
+        print("Adding move to history - count: \(moveHistory.count)")
+        moveHistory.append((from: from, to: to, fromCard: fromCard, toCard: toCard))
+        print("Move history count after add: \(moveHistory.count)")
+    }
+    
+    func undoLastMove() -> (from: (row: Int, col: Int), to: (row: Int, col: Int), fromCard: Card?, toCard: Card?)? {
+        print("Undoing last move - count: \(moveHistory.count)")
+        let move = moveHistory.popLast()
+        print("Move history count after undo: \(moveHistory.count)")
+        return move
+    }
+}
+
 struct RowConditionsView: View {
     let conditions: [CardCondition]
     let satisfiedRows: Set<Int>
@@ -200,7 +217,7 @@ private struct CardCellView: View {
         }
         .contentShape(Rectangle())
         .onTapGesture {
-            print("Tapped position: row=\(row), col=\(col)")
+            print("CardCellView tapped - row: \(row), col: \(col)")
             onCardTap(row, col)
         }
     }
@@ -233,62 +250,257 @@ private struct CardCellView: View {
     }
 }
 
-struct ContentView: View {
-    @StateObject private var viewModel: CardGridViewModel
-    @State private var selectedCard: (row: Int, col: Int)? = nil
-    @State private var satisfiedRows: Set<Int> = []
-    @State private var satisfiedColumns: Set<Int> = []
+struct CustomNavigationBar: View {
+    let title: String
+    let onPreviousTap: () -> Void
+    let onNextTap: () -> Void
     
-    init(viewModel: CardGridViewModel = CardGridViewModel()) {
-        _viewModel = StateObject(wrappedValue: viewModel)
+    var body: some View {
+        HStack {
+            // Left button
+            Button(action: onPreviousTap) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(width: 56, height: 56)
+                    .background(Color(hex: "333333"))
+                    .clipShape(Circle())
+            }
+            
+            Spacer()
+            
+            // Center title
+            Text(title)
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(.white)
+            
+            Spacer()
+            
+            // Right button
+            Button(action: onNextTap) {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(width: 56, height: 56)
+                    .background(Color(hex: "333333"))
+                    .clipShape(Circle())
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 56)
+        .padding(.bottom, 12)
+        .background(Color(hex: "191919"))
+    }
+}
+
+struct CustomBottomNavigationBar: View {
+    let onUndoTap: () -> Void
+    let canUndo: Bool
+    
+    var body: some View {
+        HStack {
+            // Left stack of buttons
+            HStack(spacing: 8) {
+                Button(action: onUndoTap) {
+                    Image(systemName: "arrow.counterclockwise")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(canUndo ? .white : .gray)
+                        .frame(width: 56, height: 56)
+                        .background(Color(hex: "333333"))
+                        .clipShape(Circle())
+                }
+                .disabled(!canUndo)
+                
+                Button(action: {}) {
+                    Image(systemName: "arrow.left")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 56, height: 56)
+                        .background(Color(hex: "333333"))
+                        .clipShape(Circle())
+                }
+            }
+            
+            Spacer()
+            
+            // Center button
+            Button(action: {}) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(width: 56, height: 56)
+                    .background(Color(hex: "333333"))
+                    .clipShape(Circle())
+            }
+            
+            Spacer()
+            
+            // Right stack of buttons
+            HStack(spacing: 8) {
+                Button(action: {}) {
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 56, height: 56)
+                        .background(Color(hex: "333333"))
+                        .clipShape(Circle())
+                }
+                
+                Button(action: {}) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 56, height: 56)
+                        .background(Color(hex: "333333"))
+                        .clipShape(Circle())
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+        .padding(.bottom, 48)
+        .background(Color(hex: "191919"))
+    }
+}
+
+struct Puzzle1View: View {
+    var body: some View {
+        Text("Puzzle 1")
+            .foregroundColor(.white)
+    }
+}
+
+struct Puzzle2View: View {
+    var body: some View {
+        Text("Puzzle 2")
+            .foregroundColor(.white)
+    }
+}
+
+struct Puzzle3View: View {
+    var body: some View {
+        Text("Puzzle 3")
+            .foregroundColor(.white)
+    }
+}
+
+struct MainView: View {
+    @State private var currentPuzzleIndex = 0
+    @StateObject private var moveHistoryViewModel = MoveHistoryViewModel()
+    @StateObject private var cardGridViewModel = CardGridViewModel()
+    
+    private let puzzles = [
+        (name: "Prototype puzzle", view: { moveHistoryViewModel, cardGridViewModel in AnyView(PokerHandsView(viewModel: cardGridViewModel, moveHistoryViewModel: moveHistoryViewModel)) }),
+        (name: "Puzzle 1", view: { _, _ in AnyView(Puzzle1View()) }),
+        (name: "Puzzle 2", view: { _, _ in AnyView(Puzzle2View()) }),
+        (name: "Puzzle 3", view: { _, _ in AnyView(Puzzle3View()) })
+    ]
+    
+    private var canUndo: Bool {
+        let canUndo = currentPuzzleIndex == 0 && moveHistoryViewModel.moveHistory.count > 0
+        print("MainView - canUndo: \(canUndo), moveHistory.count: \(moveHistoryViewModel.moveHistory.count)")
+        return canUndo
     }
     
     var body: some View {
         GeometryReader { geometry in
-            VStack {
+            VStack(spacing: 0) {
+                CustomNavigationBar(title: puzzles[currentPuzzleIndex].name, onPreviousTap: navigateToPreviousPuzzle, onNextTap: navigateToNextPuzzle)
+                    .safeAreaInset(edge: .top) {
+                        Color.clear.frame(height: 0)
+                    }
+                
                 Spacer()
                 
-                HStack {
-                    Spacer()
-                    
-                    VStack(spacing: 0) {
-                        // Column conditions at the top
-                        ColumnConditionsView(
-                            conditions: viewModel.columnConditions,
-                            satisfiedColumns: satisfiedColumns,
-                            viewModel: viewModel
-                        )
-                        
-                        HStack(spacing: -4) {
-                            // Row conditions on the left
-                            RowConditionsView(
-                                conditions: viewModel.rowConditions,
-                                satisfiedRows: satisfiedRows,
-                                viewModel: viewModel
-                            )
-                            
-                            // The grid
-                            CardGridView(
-                                cards: viewModel.cards,
-                                emptyCardVariants: viewModel.emptyCardVariants,
-                                selectedCard: selectedCard,
-                                onCardTap: handleCardTap,
-                                satisfiedRows: satisfiedRows,
-                                satisfiedColumns: satisfiedColumns,
-                                viewModel: viewModel
-                            )
-                        }
-                    }
-                    
-                    Spacer()
+                if currentPuzzleIndex == 0 {
+                    PokerHandsView(viewModel: cardGridViewModel, moveHistoryViewModel: moveHistoryViewModel)
+                } else {
+                    puzzles[currentPuzzleIndex].view(moveHistoryViewModel, cardGridViewModel)
                 }
                 
                 Spacer()
+                
+                CustomBottomNavigationBar(
+                    onUndoTap: {
+                        print("Undo button tapped")
+                        if let lastMove = moveHistoryViewModel.undoLastMove() {
+                            print("Undoing move from (\(lastMove.from.row), \(lastMove.from.col)) to (\(lastMove.to.row), \(lastMove.to.col))")
+                            // Restore both cards to their original positions
+                            cardGridViewModel.cards[lastMove.from.row][lastMove.from.col] = lastMove.fromCard
+                            cardGridViewModel.cards[lastMove.to.row][lastMove.to.col] = lastMove.toCard
+                        }
+                    },
+                    canUndo: canUndo
+                )
+                .safeAreaInset(edge: .bottom) {
+                    Color.clear.frame(height: 0)
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(hex: "191919"))
         .ignoresSafeArea()
+        .onChange(of: moveHistoryViewModel.moveHistory.count) { count in
+            print("MainView - Move history count changed to: \(count)")
+            print("MainView - Can undo: \(currentPuzzleIndex == 0 && count > 0)")
+        }
+    }
+    
+    private func navigateToNextPuzzle() {
+        withAnimation {
+            currentPuzzleIndex = (currentPuzzleIndex + 1) % puzzles.count
+        }
+    }
+    
+    private func navigateToPreviousPuzzle() {
+        withAnimation {
+            currentPuzzleIndex = (currentPuzzleIndex - 1 + puzzles.count) % puzzles.count
+        }
+    }
+}
+
+struct PokerHandsView: View {
+    @ObservedObject var viewModel: CardGridViewModel
+    @ObservedObject var moveHistoryViewModel: MoveHistoryViewModel
+    @State private var selectedCard: (row: Int, col: Int)? = nil
+    @State private var satisfiedRows: Set<Int> = []
+    @State private var satisfiedColumns: Set<Int> = []
+    
+    var body: some View {
+        HStack {
+            Spacer()
+            
+            VStack(spacing: 0) {
+                // Column conditions at the top
+                ColumnConditionsView(
+                    conditions: viewModel.columnConditions,
+                    satisfiedColumns: satisfiedColumns,
+                    viewModel: viewModel
+                )
+                
+                HStack(spacing: -4) {
+                    // Row conditions on the left
+                    RowConditionsView(
+                        conditions: viewModel.rowConditions,
+                        satisfiedRows: satisfiedRows,
+                        viewModel: viewModel
+                    )
+                    
+                    // The grid
+                    CardGridView(
+                        cards: viewModel.cards,
+                        emptyCardVariants: viewModel.emptyCardVariants,
+                        selectedCard: selectedCard,
+                        onCardTap: handleCardTap,
+                        satisfiedRows: satisfiedRows,
+                        satisfiedColumns: satisfiedColumns,
+                        viewModel: viewModel
+                    )
+                }
+            }
+            
+            Spacer()
+        }
         .onAppear {
             checkAllConditions()
         }
@@ -355,13 +567,17 @@ struct ContentView: View {
             // If the target position is empty, move the card there
             if viewModel.cards[row][col] == nil {
                 print("Moving card to empty position")
-                viewModel.cards[row][col] = viewModel.cards[selected.row][selected.col]
+                let card = viewModel.cards[selected.row][selected.col]
+                viewModel.cards[row][col] = card
                 viewModel.cards[selected.row][selected.col] = nil
+                moveHistoryViewModel.addMove(from: selected, to: (row, col), fromCard: card, toCard: nil)
             } else {
                 print("Swapping cards")
-                let temp = viewModel.cards[selected.row][selected.col]
-                viewModel.cards[selected.row][selected.col] = viewModel.cards[row][col]
-                viewModel.cards[row][col] = temp
+                let fromCard = viewModel.cards[selected.row][selected.col]
+                let toCard = viewModel.cards[row][col]
+                viewModel.cards[selected.row][selected.col] = toCard
+                viewModel.cards[row][col] = fromCard
+                moveHistoryViewModel.addMove(from: selected, to: (row, col), fromCard: fromCard, toCard: toCard)
             }
             
             // Check all conditions after any card movement
@@ -376,13 +592,9 @@ struct ContentView: View {
 }
 
 #Preview("Unsolved State") {
-    // Create a ContentView with a shuffled viewModel
-    let viewModel = CardGridViewModel(shuffleCards: true)
-    return ContentView(viewModel: viewModel)
+    return MainView()
 }
 
 #Preview("Solved State") {
-    // Create a ContentView with a solved viewModel
-    let viewModel = CardGridViewModel(shuffleCards: false)
-    return ContentView(viewModel: viewModel)
+    return MainView()
 }
