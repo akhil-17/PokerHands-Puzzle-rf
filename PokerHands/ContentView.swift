@@ -13,11 +13,14 @@ struct RowConditionsView: View {
     let viewModel: CardGridViewModel
     
     var body: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.fixed(60), spacing: 8), count: 1), spacing: 8) {
+        LazyVGrid(columns: Array(repeating: GridItem(.fixed(40), spacing: 8), count: 1), spacing: 8) {
             ForEach(0..<5) { index in
                 TextCardLeft(text: formatCondition(conditions[index]))
                     .foregroundColor(satisfiedRows.contains(index) ? Color(hex: "4CAF50") : .white)
                     .animation(.easeInOut, value: satisfiedRows.contains(index))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(.trailing, 8)
@@ -72,8 +75,8 @@ struct ColumnConditionsView: View {
                     .animation(.easeInOut, value: satisfiedColumns.contains(index))
             }
         }
-        .padding(.leading, 66)
-        .padding(.bottom, 8)
+        .padding(.leading, 42)
+        .padding(.bottom, 0)
     }
     
     private func formatCondition(_ condition: CardCondition) -> String {
@@ -241,45 +244,47 @@ struct ContentView: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
-            Spacer()
-            
-            HStack(spacing: 0) {
+        GeometryReader { geometry in
+            VStack {
                 Spacer()
                 
-                VStack(spacing: 0) {
-                    // Column conditions at the top
-                    ColumnConditionsView(
-                        conditions: viewModel.columnConditions,
-                        satisfiedColumns: satisfiedColumns,
-                        viewModel: viewModel
-                    )
+                HStack {
+                    Spacer()
                     
-                    HStack(spacing: 0) {
-                        // Row conditions on the left
-                        RowConditionsView(
-                            conditions: viewModel.rowConditions,
-                            satisfiedRows: satisfiedRows,
-                            viewModel: viewModel
-                        )
-                        
-                        // The grid
-                        CardGridView(
-                            cards: viewModel.cards,
-                            emptyCardVariants: viewModel.emptyCardVariants,
-                            selectedCard: selectedCard,
-                            onCardTap: handleCardTap,
-                            satisfiedRows: satisfiedRows,
+                    VStack(spacing: 0) {
+                        // Column conditions at the top
+                        ColumnConditionsView(
+                            conditions: viewModel.columnConditions,
                             satisfiedColumns: satisfiedColumns,
                             viewModel: viewModel
                         )
+                        
+                        HStack(spacing: 0) {
+                            // Row conditions on the left
+                            RowConditionsView(
+                                conditions: viewModel.rowConditions,
+                                satisfiedRows: satisfiedRows,
+                                viewModel: viewModel
+                            )
+                            
+                            // The grid
+                            CardGridView(
+                                cards: viewModel.cards,
+                                emptyCardVariants: viewModel.emptyCardVariants,
+                                selectedCard: selectedCard,
+                                onCardTap: handleCardTap,
+                                satisfiedRows: satisfiedRows,
+                                satisfiedColumns: satisfiedColumns,
+                                viewModel: viewModel
+                            )
+                        }
                     }
+                    
+                    Spacer()
                 }
                 
                 Spacer()
             }
-            
-            Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(hex: "191919"))

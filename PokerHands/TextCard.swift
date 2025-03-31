@@ -11,9 +11,10 @@ struct TextCardLeft: View {
         Text(text)
             .font(FontManager.shared.customFont(size: 13))
             .multilineTextAlignment(.trailing)
-            .lineLimit(4)
-            .padding(.trailing, 8)
-            .frame(width: 60, height: 80, alignment: .trailing)
+            .lineLimit(nil)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: 36)
+            .frame(width: 40, height: 80, alignment: .trailing)
     }
 }
 

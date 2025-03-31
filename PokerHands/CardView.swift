@@ -134,9 +134,11 @@ struct GradientBorderOverlay: ViewModifier {
                         RoundedRectangle(cornerRadius: 8)
                             .stroke(
                                 LinearGradient(
-                                    colors: [
-                                        Color(hex: "4CAF50"),  // Green
-                                        Color(hex: "BA68C8")   // Purple
+                                    stops: [
+                                        .init(color: Color(hex: "4CAF50"), location: 0),    // Green at 0%
+                                        .init(color: Color(hex: "4CAF50"), location: 0.48),  // Green at 48%
+                                        .init(color: Color(hex: "BA68C8"), location: 0.52),  // Purple at 52%
+                                        .init(color: Color(hex: "BA68C8"), location: 1)      // Purple at 100%
                                     ],
                                     startPoint: .bottomLeading,
                                     endPoint: .topTrailing
