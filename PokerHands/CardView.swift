@@ -51,7 +51,7 @@ struct RowHighlightOverlay: ViewModifier {
                     if isRowSatisfied && !isColumnSatisfied {
                         RoundedRectangle(cornerRadius: 8)
                             .stroke(Color(hex: "4CAF50").opacity(0.5), lineWidth: 6)
-                            .blur(radius: 2)
+                            .blur(radius: 5)
                     }
                 }
             )
@@ -77,7 +77,7 @@ struct ColumnHighlightOverlay: ViewModifier {
                     if isColumnSatisfied && !isRowSatisfied {
                         RoundedRectangle(cornerRadius: 8)
                             .stroke(Color(hex: "BA68C8").opacity(0.5), lineWidth: 6)
-                            .blur(radius: 2)
+                            .blur(radius: 5)
                     }
                 }
             )
@@ -104,14 +104,16 @@ struct GradientGlowOverlay: ViewModifier {
                         RoundedRectangle(cornerRadius: 8)
                             .stroke(
                                 LinearGradient(
-                                    colors: [
-                                        Color(hex: "4CAF50"),  // Green
-                                        Color(hex: "BA68C8")   // Purple
+                                    stops: [
+                                        .init(color: Color(hex: "4CAF50"), location: 0),    // Green at 0%
+                                        .init(color: Color(hex: "4CAF50"), location: 0.25),  // Green at 25%
+                                        .init(color: Color(hex: "BA68C8"), location: 0.75),  // Purple at 75%
+                                        .init(color: Color(hex: "BA68C8"), location: 1)      // Purple at 100%
                                     ],
                                     startPoint: .bottomLeading,
                                     endPoint: .topTrailing
                                 ).opacity(0.5),
-                                lineWidth: 8
+                                lineWidth: 6
                             )
                             .blur(radius: 4)
                     }

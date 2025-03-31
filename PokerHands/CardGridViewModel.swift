@@ -325,8 +325,24 @@ class CardGridViewModel: ObservableObject {
             print("All same rank: \(result)")
             
         case .royalCourt:
-            result = validCards.filter { $0.rank == .king || $0.rank == .queen || $0.rank == .jack }.count == 3
-            print("Royal Court check: \(result)")
+            // Find one each of King, Queen, and Jack
+            var foundKing = false
+            var foundQueen = false
+            var foundJack = false
+            
+            for card in validCards {
+                if !foundKing && card.rank == .king {
+                    foundKing = true
+                } else if !foundQueen && card.rank == .queen {
+                    foundQueen = true
+                } else if !foundJack && card.rank == .jack {
+                    foundJack = true
+                }
+            }
+            
+            let isSatisfied = foundKing && foundQueen && foundJack
+            print("Royal Court check - Found King: \(foundKing), Queen: \(foundQueen), Jack: \(foundJack): \(isSatisfied)")
+            return isSatisfied
         }
         
         print("Final result: \(result)")
@@ -390,9 +406,14 @@ class CardGridViewModel: ObservableObject {
             let values = validCards.map { $0.rank.numericValue }
             let valueCounts = Dictionary(grouping: values, by: { $0 }).mapValues { $0.count }
             if let targetValue = valueCounts.first(where: { $0.value >= 3 })?.key {
+                var count = 0
                 for (index, card) in cards.enumerated() {
                     if let card = card, card.rank.numericValue == targetValue {
                         satisfyingIndices.insert(index)
+                        count += 1
+                        if count >= 3 {
+                            break
+                        }
                     }
                 }
             }
@@ -512,11 +533,32 @@ class CardGridViewModel: ObservableObject {
             }
             
         case .royalCourt:
-            // Find the three royal cards
+            // Find one each of King, Queen, and Jack
+            var foundKing = false
+            var foundQueen = false
+            var foundJack = false
+            
             for (index, card) in cards.enumerated() {
-                if let card = card, card.rank == .king || card.rank == .queen || card.rank == .jack {
-                    satisfyingIndices.insert(index)
+                if let card = card {
+                    if !foundKing && card.rank == .king {
+                        foundKing = true
+                        satisfyingIndices.insert(index)
+                    } else if !foundQueen && card.rank == .queen {
+                        foundQueen = true
+                        satisfyingIndices.insert(index)
+                    } else if !foundJack && card.rank == .jack {
+                        foundJack = true
+                        satisfyingIndices.insert(index)
+                    }
                 }
+            }
+            
+            let isSatisfied = foundKing && foundQueen && foundJack
+            print("Royal Court check - Found King: \(foundKing), Queen: \(foundQueen), Jack: \(foundJack): \(isSatisfied)")
+            
+            // Only return the indices if we found all three royal cards
+            if !isSatisfied {
+                satisfyingIndices.removeAll()
             }
         }
         
