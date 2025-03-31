@@ -583,9 +583,9 @@ struct MainView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(hex: "191919"))
         .ignoresSafeArea()
-        .onChange(of: moveHistoryViewModel.moveHistory.count) { count in
-            print("MainView - Move history count changed to: \(count)")
-            print("MainView - Can undo: \(currentPuzzleIndex == 0 && count > 0)")
+        .onChange(of: moveHistoryViewModel.moveHistory.count) { oldCount, newCount in
+            print("MainView - Move history count changed from: \(oldCount) to: \(newCount)")
+            print("MainView - Can undo: \(currentPuzzleIndex == 0 && newCount > 0)")
         }
     }
     

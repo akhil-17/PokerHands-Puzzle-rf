@@ -167,7 +167,7 @@ class CardGridViewModel: ObservableObject {
     
     private func setupPrototypePuzzle() {
         // Define all the cards needed for the puzzle
-        var allCards: [Card] = [
+        let allCards: [Card] = [
             // Row 0: All Spades
             Card(suit: .spades, rank: .ace),
             Card(suit: .spades, rank: .king),
@@ -687,7 +687,6 @@ class CardGridViewModel: ObservableObject {
     func checkAllConditions() {
         print("\n=== Checking All Conditions ===")
         var newSatisfiedRows = Set<Int>()
-        var newSatisfiedColumns = Set<Int>()
         
         // Check all rows
         print("\nChecking Rows:")
