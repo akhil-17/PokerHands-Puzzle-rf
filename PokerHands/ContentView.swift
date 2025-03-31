@@ -13,16 +13,14 @@ struct RowConditionsView: View {
     let viewModel: CardGridViewModel
     
     var body: some View {
-        HStack(spacing: 0) {
-            LazyVGrid(columns: Array(repeating: GridItem(.fixed(60), spacing: 8), count: 5), alignment: .leading, spacing: 8) {
-                ForEach(0..<5) { index in
-                    TextCardTop(text: formatCondition(conditions[index]))
-                        .foregroundColor(satisfiedRows.contains(index) ? Color(hex: "4CAF50") : .white)
-                        .animation(.easeInOut, value: satisfiedRows.contains(index))
-                }
+        LazyVGrid(columns: Array(repeating: GridItem(.fixed(60), spacing: 8), count: 1), spacing: 8) {
+            ForEach(0..<5) { index in
+                TextCardLeft(text: formatCondition(conditions[index]))
+                    .foregroundColor(satisfiedRows.contains(index) ? Color(hex: "4CAF50") : .white)
+                    .animation(.easeInOut, value: satisfiedRows.contains(index))
             }
         }
-        .padding(.leading, 66)
+        .padding(.trailing, 8)
     }
     
     private func formatCondition(_ condition: CardCondition) -> String {
@@ -67,14 +65,15 @@ struct ColumnConditionsView: View {
     let viewModel: CardGridViewModel
     
     var body: some View {
-        LazyVGrid(columns: [GridItem(.fixed(60))], spacing: 8) {
+        LazyVGrid(columns: Array(repeating: GridItem(.fixed(60), spacing: 8), count: 5), spacing: 8) {
             ForEach(0..<5) { index in
-                TextCardLeft(text: formatCondition(conditions[index]))
+                TextCardTop(text: formatCondition(conditions[index]))
                     .foregroundColor(satisfiedColumns.contains(index) ? Color(hex: "BA68C8") : .white)
                     .animation(.easeInOut, value: satisfiedColumns.contains(index))
             }
         }
-        .padding(.leading, 6)
+        .padding(.leading, 66)
+        .padding(.bottom, 8)
     }
     
     private func formatCondition(_ condition: CardCondition) -> String {
@@ -125,41 +124,91 @@ struct CardGridView: View {
     var body: some View {
         LazyVGrid(columns: Array(repeating: GridItem(.fixed(60), spacing: 8), count: 5), spacing: 8) {
             ForEach(0..<5) { row in
-                ForEach(0..<5) { col in
-                    Group {
-                        if let card = cards[row][col] {
-                            let (isRowSatisfied, isColumnSatisfied) = isCardSatisfyingConditions(row: row, col: col)
-                            CardView(
-                                card: card,
-                                isSelected: selectedCard.map { $0 == (row, col) } ?? false,
-                                isRowSatisfied: isRowSatisfied,
-                                isColumnSatisfied: isColumnSatisfied
-                            )
-                        } else {
-                            EmptyCardView(
-                                variant: emptyCardVariants[row][col],
-                                isHighlighted: selectedCard != nil
-                            )
-                        }
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        print("Tapped position: row=\(row), col=\(col)")
-                        onCardTap(row, col)
-                    }
-                }
+                CardRowView(
+                    row: row,
+                    cards: cards[row],
+                    emptyCardVariants: emptyCardVariants[row],
+                    selectedCard: selectedCard,
+                    onCardTap: onCardTap,
+                    satisfiedRows: satisfiedRows,
+                    satisfiedColumns: satisfiedColumns,
+                    viewModel: viewModel
+                )
             }
         }
         .padding(.trailing, 8)
     }
+}
+
+private struct CardRowView: View {
+    let row: Int
+    let cards: [Card?]
+    let emptyCardVariants: [EmptyCardView.Variant]
+    let selectedCard: (row: Int, col: Int)?
+    let onCardTap: (Int, Int) -> Void
+    let satisfiedRows: Set<Int>
+    let satisfiedColumns: Set<Int>
+    let viewModel: CardGridViewModel
     
-    private func isCardSatisfyingConditions(row: Int, col: Int) -> (row: Bool, column: Bool) {
+    var body: some View {
+        ForEach(0..<5) { col in
+            CardCellView(
+                row: row,
+                col: col,
+                card: cards[col],
+                emptyCardVariant: emptyCardVariants[col],
+                selectedCard: selectedCard,
+                onCardTap: onCardTap,
+                satisfiedRows: satisfiedRows,
+                satisfiedColumns: satisfiedColumns,
+                viewModel: viewModel
+            )
+        }
+    }
+}
+
+private struct CardCellView: View {
+    let row: Int
+    let col: Int
+    let card: Card?
+    let emptyCardVariant: EmptyCardView.Variant
+    let selectedCard: (row: Int, col: Int)?
+    let onCardTap: (Int, Int) -> Void
+    let satisfiedRows: Set<Int>
+    let satisfiedColumns: Set<Int>
+    let viewModel: CardGridViewModel
+    
+    var body: some View {
+        Group {
+            if let card = card {
+                let (isRowSatisfied, isColumnSatisfied) = isCardSatisfyingConditions()
+                CardView(
+                    card: card,
+                    isSelected: selectedCard.map { $0 == (row, col) } ?? false,
+                    isRowSatisfied: isRowSatisfied,
+                    isColumnSatisfied: isColumnSatisfied
+                )
+            } else {
+                EmptyCardView(
+                    variant: emptyCardVariant,
+                    isHighlighted: selectedCard != nil
+                )
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            print("Tapped position: row=\(row), col=\(col)")
+            onCardTap(row, col)
+        }
+    }
+    
+    private func isCardSatisfyingConditions() -> (row: Bool, column: Bool) {
         var isRowSatisfied = false
         var isColumnSatisfied = false
         
         // Check if the card is part of a satisfied row condition
         if satisfiedRows.contains(row) {
-            let rowCards = cards[row]
+            let rowCards = viewModel.cards[row]
             let satisfyingIndices = viewModel.getSatisfyingCards(for: viewModel.rowConditions[row], in: rowCards)
             if satisfyingIndices.contains(col) {
                 print("Card at row \(row), col \(col) satisfies row condition")
@@ -169,7 +218,7 @@ struct CardGridView: View {
         
         // Check if the card is part of a satisfied column condition
         if satisfiedColumns.contains(col) {
-            let columnCards = cards.map { $0[col] }
+            let columnCards = viewModel.cards.map { $0[col] }
             let satisfyingIndices = viewModel.getSatisfyingCards(for: viewModel.columnConditions[col], in: columnCards)
             if satisfyingIndices.contains(row) {
                 print("Card at row \(row), col \(col) satisfies column condition")
@@ -199,19 +248,22 @@ struct ContentView: View {
                 Spacer()
                 
                 VStack(spacing: 0) {
-                    RowConditionsView(
-                        conditions: viewModel.rowConditions,
-                        satisfiedRows: satisfiedRows,
+                    // Column conditions at the top
+                    ColumnConditionsView(
+                        conditions: viewModel.columnConditions,
+                        satisfiedColumns: satisfiedColumns,
                         viewModel: viewModel
                     )
                     
                     HStack(spacing: 0) {
-                        ColumnConditionsView(
-                            conditions: viewModel.columnConditions,
-                            satisfiedColumns: satisfiedColumns,
+                        // Row conditions on the left
+                        RowConditionsView(
+                            conditions: viewModel.rowConditions,
+                            satisfiedRows: satisfiedRows,
                             viewModel: viewModel
                         )
                         
+                        // The grid
                         CardGridView(
                             cards: viewModel.cards,
                             emptyCardVariants: viewModel.emptyCardVariants,
@@ -320,10 +372,12 @@ struct ContentView: View {
 
 #Preview("Unsolved State") {
     // Create a ContentView with a shuffled viewModel
-    ContentView(viewModel: CardGridViewModel(shuffleCards: true))
+    let viewModel = CardGridViewModel(shuffleCards: true)
+    return ContentView(viewModel: viewModel)
 }
 
 #Preview("Solved State") {
     // Create a ContentView with a solved viewModel
-    ContentView(viewModel: CardGridViewModel(shuffleCards: false))
+    let viewModel = CardGridViewModel(shuffleCards: false)
+    return ContentView(viewModel: viewModel)
 }

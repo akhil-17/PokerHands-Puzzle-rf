@@ -30,7 +30,7 @@ enum PokerHand {
 class CardGridViewModel: ObservableObject {
     @Published var cards: [[Card?]] = Array(repeating: Array(repeating: nil, count: 5), count: 5)
     @Published var emptyCardVariants: [[EmptyCardView.Variant]] = Array(repeating: Array(repeating: .empty, count: 5), count: 5)
-    @Published var rowConditions: [CardCondition] = []
+    @Published var rowConditions: [CardCondition] = []  // Conditions for both display and checking
     @Published var columnConditions: [CardCondition] = []
     
     init(shuffleCards: Bool = true) {
@@ -124,19 +124,19 @@ class CardGridViewModel: ObservableObject {
             Card(suit: .clubs, rank: .seven)
         ]
         
-        // Set up conditions
+        // Set up row conditions
         rowConditions = [
             CardCondition.allSameSuit,    // Row 0: All Spades
             CardCondition.threeOfAKind,   // Row 1: Three 8s
-            CardCondition.royalCourt,     // Row 2: Royal Court (K, Q, J)
+            CardCondition.royalCourt,     // Row 2: Royal Court
             CardCondition.pair,           // Row 3: Pair of 9s
             CardCondition.pair            // Row 4: Pair of 10s
         ]
 
         columnConditions = [
-            CardCondition.pair,           // Column 0: Pair of 8s
-            CardCondition.pair,           // Column 1: Pair of Kings
-            CardCondition.pair,           // Column 2: Pair of 9s
+            CardCondition.pair,           // Column 0: Pair of Kings
+            CardCondition.pair,           // Column 1: Pair of 8s
+            CardCondition.pair,           // Column 2: Pair of Queens
             CardCondition.pair,           // Column 3: Pair of 6s
             CardCondition.pair            // Column 4: Pair of 7s
         ]
@@ -299,8 +299,12 @@ class CardGridViewModel: ObservableObject {
             print("Pair check: \(result)")
             
         case .allSameSuit:
-            result = validCards.allSatisfy { $0.suit == validCards[0].suit }
-            print("All same suit: \(result)")
+            if validCards.count != 5 { return false }
+            // Count cards of each suit
+            let suitCounts = Dictionary(grouping: validCards, by: { $0.suit }).mapValues { $0.count }
+            // Check if any suit has exactly 5 cards
+            result = suitCounts.contains { $0.value == 5 }
+            print("All same suit check - Suit counts: \(suitCounts), Result: \(result)")
             
         case .descending:
             let values = validCards.map { $0.rank.numericValue }.sorted().reversed()
@@ -384,9 +388,8 @@ class CardGridViewModel: ObservableObject {
         case .threeOfAKind:
             // Find all three cards of the same rank
             let values = validCards.map { $0.rank.numericValue }
-            if let targetValue = values.first(where: { value in
-                values.filter { $0 == value }.count >= 3
-            }) {
+            let valueCounts = Dictionary(grouping: values, by: { $0 }).mapValues { $0.count }
+            if let targetValue = valueCounts.first(where: { $0.value >= 3 })?.key {
                 for (index, card) in cards.enumerated() {
                     if let card = card, card.rank.numericValue == targetValue {
                         satisfyingIndices.insert(index)
@@ -553,5 +556,30 @@ class CardGridViewModel: ObservableObject {
         case .royalCourt:
             return "Royal Court"
         }
+    }
+    
+    func checkAllConditions() {
+        print("\n=== Checking All Conditions ===")
+        var newSatisfiedRows = Set<Int>()
+        var newSatisfiedColumns = Set<Int>()
+        
+        // Check all rows
+        print("\nChecking Rows:")
+        for row in 0..<5 {
+            let rowCards = cards[row]
+            print("\nRow \(row):")
+            let rowCardStrings = rowCards.compactMap { (card: Card?) -> String? in
+                guard let card = card else { return nil }
+                return "\(card.suit) \(card.rank)"
+            }
+            print("Cards: \(rowCardStrings)")
+            print("Condition: \(rowConditions[row])")
+            if isConditionSatisfied(cards: rowCards, condition: rowConditions[row]) {
+                print("Row \(row) condition satisfied!")
+                newSatisfiedRows.insert(row)
+            }
+        }
+        
+        // ... rest of the method ...
     }
 } 
