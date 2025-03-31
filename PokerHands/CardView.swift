@@ -24,6 +24,8 @@ struct CardView: View {
         .modifier(SelectionOverlay(isSelected: isSelected))
         .modifier(RowHighlightOverlay(isRowSatisfied: isRowSatisfied, isColumnSatisfied: isColumnSatisfied))
         .modifier(ColumnHighlightOverlay(isColumnSatisfied: isColumnSatisfied, isRowSatisfied: isRowSatisfied))
+        .modifier(GradientGlowOverlay(isRowSatisfied: isRowSatisfied, isColumnSatisfied: isColumnSatisfied))
+        .modifier(GradientBorderOverlay(isRowSatisfied: isRowSatisfied, isColumnSatisfied: isColumnSatisfied))
     }
 }
 
@@ -46,11 +48,10 @@ struct RowHighlightOverlay: ViewModifier {
         content
             .overlay(
                 Group {
-                    if isRowSatisfied {
+                    if isRowSatisfied && !isColumnSatisfied {
                         RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color(hex: "4CAF50").opacity(isColumnSatisfied ? 1.1 : 1.0), lineWidth: 6)
-                            .blur(radius: isColumnSatisfied ? 5 : 3)
-                            .padding(isColumnSatisfied ? 4 : 0)
+                            .stroke(Color(hex: "BA68C8").opacity(0.5), lineWidth: 6)
+                            .blur(radius: 2)
                     }
                 }
             )
@@ -58,7 +59,7 @@ struct RowHighlightOverlay: ViewModifier {
                 Group {
                     if isRowSatisfied && !isColumnSatisfied {
                         RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color(hex: "4CAF50"), lineWidth: 2)
+                            .stroke(Color(hex: "BA68C8"), lineWidth: 2)
                     }
                 }
             )
@@ -73,10 +74,10 @@ struct ColumnHighlightOverlay: ViewModifier {
         content
             .overlay(
                 Group {
-                    if isColumnSatisfied {
+                    if isColumnSatisfied && !isRowSatisfied {
                         RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color(hex: "BA68C8").opacity(1.0), lineWidth: 6)
-                            .blur(radius: 3)
+                            .stroke(Color(hex: "BA68C8").opacity(0.5), lineWidth: 6)
+                            .blur(radius: 2)
                     }
                 }
             )
@@ -85,6 +86,61 @@ struct ColumnHighlightOverlay: ViewModifier {
                     if isColumnSatisfied {
                         RoundedRectangle(cornerRadius: 8)
                             .stroke(Color(hex: "BA68C8"), lineWidth: isRowSatisfied ? 1 : 2)
+                    }
+                }
+            )
+    }
+}
+
+struct GradientGlowOverlay: ViewModifier {
+    let isRowSatisfied: Bool
+    let isColumnSatisfied: Bool
+    
+    func body(content: Content) -> some View {
+        content
+            .overlay(
+                Group {
+                    if isRowSatisfied && isColumnSatisfied {
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [
+                                        Color(hex: "4CAF50"),  // Green
+                                        Color(hex: "BA68C8")   // Purple
+                                    ],
+                                    startPoint: .bottomLeading,
+                                    endPoint: .topTrailing
+                                ).opacity(0.5),
+                                lineWidth: 8
+                            )
+                            .blur(radius: 4)
+                    }
+                }
+            )
+    }
+}
+
+struct GradientBorderOverlay: ViewModifier {
+    let isRowSatisfied: Bool
+    let isColumnSatisfied: Bool
+    
+    func body(content: Content) -> some View {
+        content
+            .overlay(
+                Group {
+                    if isRowSatisfied && isColumnSatisfied {
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [
+                                        Color(hex: "4CAF50"),  // Green
+                                        Color(hex: "BA68C8")   // Purple
+                                    ],
+                                    startPoint: .bottomLeading,
+                                    endPoint: .topTrailing
+                                ),
+                                lineWidth: 2
+                            )
                     }
                 }
             )
