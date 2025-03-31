@@ -32,15 +32,23 @@ class CardGridViewModel: ObservableObject {
     @Published var emptyCardVariants: [[EmptyCardView.Variant]] = Array(repeating: Array(repeating: .empty, count: 5), count: 5)
     @Published var rowConditions: [CardCondition] = []  // Conditions for both display and checking
     @Published var columnConditions: [CardCondition] = []
+    private var initialCards: [[Card?]] = [] // Store the initial state
     
     init(shuffleCards: Bool = true) {
         setupPrototypePuzzle()
+        // Store the initial state before shuffling
+        initialCards = cards
         if shuffleCards {
             shuffleInitialState()
         }
     }
     
-    private func shuffleInitialState() {
+    func resetToInitialState() {
+        print("Resetting to initial state")
+        cards = initialCards
+    }
+    
+    func shuffleInitialState() {
         print("\n=== Starting shuffleInitialState ===")
         // Get all cards from the current state
         var allCards: [Card] = []

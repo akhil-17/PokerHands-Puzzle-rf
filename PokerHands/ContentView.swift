@@ -318,8 +318,10 @@ struct CustomNavigationBar: View {
 struct CustomBottomNavigationBar: View {
     let onUndoTap: () -> Void
     let onRedoTap: () -> Void
+    let onResetTap: () -> Void
     let canUndo: Bool
     let canRedo: Bool
+    let canReset: Bool
     
     var body: some View {
         HStack {
@@ -375,13 +377,20 @@ struct CustomBottomNavigationBar: View {
             
             // Right stack of buttons with fixed width
             HStack(spacing: 8) {
-                Button(action: {}) {
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.white)
+                // Reset button or placeholder
+                if canReset {
+                    Button(action: onResetTap) {
+                        Image(systemName: "arrow.trianglehead.2.counterclockwise")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(width: 56, height: 56)
+                            .background(Color(hex: "333333"))
+                            .clipShape(Circle())
+                    }
+                } else {
+                    // Placeholder with same dimensions
+                    Color.clear
                         .frame(width: 56, height: 56)
-                        .background(Color(hex: "333333"))
-                        .clipShape(Circle())
                 }
                 
                 Button(action: {}) {
@@ -441,6 +450,10 @@ struct MainView: View {
         return canUndo
     }
     
+    private var canReset: Bool {
+        return currentPuzzleIndex == 0 && moveHistoryViewModel.moveHistory.count > 0
+    }
+    
     var body: some View {
         GeometryReader { geometry in
             VStack(spacing: 0) {
@@ -478,8 +491,17 @@ struct MainView: View {
                             cardGridViewModel.cards[lastMove.to.row][lastMove.to.col] = lastMove.fromCard
                         }
                     },
+                    onResetTap: {
+                        print("Reset button tapped")
+                        // Reset the puzzle to its initial state
+                        cardGridViewModel.resetToInitialState()
+                        // Clear the move history
+                        moveHistoryViewModel.moveHistory.removeAll()
+                        moveHistoryViewModel.redoHistory.removeAll()
+                    },
                     canUndo: canUndo,
-                    canRedo: moveHistoryViewModel.canRedo
+                    canRedo: moveHistoryViewModel.canRedo,
+                    canReset: canReset
                 )
                 .safeAreaInset(edge: .bottom) {
                     Color.clear.frame(height: 0)
