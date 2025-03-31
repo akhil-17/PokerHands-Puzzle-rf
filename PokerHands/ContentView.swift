@@ -9,18 +9,40 @@ import SwiftUI
 
 class MoveHistoryViewModel: ObservableObject {
     @Published var moveHistory: [(from: (row: Int, col: Int), to: (row: Int, col: Int), fromCard: Card?, toCard: Card?)] = []
+    @Published var redoHistory: [(from: (row: Int, col: Int), to: (row: Int, col: Int), fromCard: Card?, toCard: Card?)] = []
     
     func addMove(from: (row: Int, col: Int), to: (row: Int, col: Int), fromCard: Card?, toCard: Card?) {
         print("Adding move to history - count: \(moveHistory.count)")
         moveHistory.append((from: from, to: to, fromCard: fromCard, toCard: toCard))
+        // Clear redo history when a new move is made
+        redoHistory.removeAll()
         print("Move history count after add: \(moveHistory.count)")
     }
     
     func undoLastMove() -> (from: (row: Int, col: Int), to: (row: Int, col: Int), fromCard: Card?, toCard: Card?)? {
         print("Undoing last move - count: \(moveHistory.count)")
-        let move = moveHistory.popLast()
-        print("Move history count after undo: \(moveHistory.count)")
-        return move
+        if let move = moveHistory.popLast() {
+            redoHistory.append(move)
+            print("Move history count after undo: \(moveHistory.count)")
+            print("Redo history count after undo: \(redoHistory.count)")
+            return move
+        }
+        return nil
+    }
+    
+    func redoLastMove() -> (from: (row: Int, col: Int), to: (row: Int, col: Int), fromCard: Card?, toCard: Card?)? {
+        print("Redoing last move - count: \(redoHistory.count)")
+        if let move = redoHistory.popLast() {
+            moveHistory.append(move)
+            print("Move history count after redo: \(moveHistory.count)")
+            print("Redo history count after redo: \(redoHistory.count)")
+            return move
+        }
+        return nil
+    }
+    
+    var canRedo: Bool {
+        return !redoHistory.isEmpty
     }
 }
 
@@ -295,31 +317,47 @@ struct CustomNavigationBar: View {
 
 struct CustomBottomNavigationBar: View {
     let onUndoTap: () -> Void
+    let onRedoTap: () -> Void
     let canUndo: Bool
+    let canRedo: Bool
     
     var body: some View {
         HStack {
-            // Left stack of buttons
+            // Left stack of buttons with fixed width
             HStack(spacing: 8) {
-                Button(action: onUndoTap) {
-                    Image(systemName: "arrow.counterclockwise")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(canUndo ? .white : .gray)
+                // Undo button or placeholder
+                if canUndo {
+                    Button(action: onUndoTap) {
+                        Image(systemName: "arrow.counterclockwise")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(width: 56, height: 56)
+                            .background(Color(hex: "333333"))
+                            .clipShape(Circle())
+                    }
+                } else {
+                    // Placeholder with same dimensions
+                    Color.clear
                         .frame(width: 56, height: 56)
-                        .background(Color(hex: "333333"))
-                        .clipShape(Circle())
                 }
-                .disabled(!canUndo)
                 
-                Button(action: {}) {
-                    Image(systemName: "arrow.left")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.white)
+                // Redo button or placeholder
+                if canRedo {
+                    Button(action: onRedoTap) {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(width: 56, height: 56)
+                            .background(Color(hex: "333333"))
+                            .clipShape(Circle())
+                    }
+                } else {
+                    // Placeholder with same dimensions
+                    Color.clear
                         .frame(width: 56, height: 56)
-                        .background(Color(hex: "333333"))
-                        .clipShape(Circle())
                 }
             }
+            .frame(width: 120) // Fixed width for the left container
             
             Spacer()
             
@@ -335,7 +373,7 @@ struct CustomBottomNavigationBar: View {
             
             Spacer()
             
-            // Right stack of buttons
+            // Right stack of buttons with fixed width
             HStack(spacing: 8) {
                 Button(action: {}) {
                     Image(systemName: "arrow.right")
@@ -355,6 +393,7 @@ struct CustomBottomNavigationBar: View {
                         .clipShape(Circle())
                 }
             }
+            .frame(width: 120) // Fixed width for the right container
         }
         .padding(.horizontal, 16)
         .padding(.top, 12)
@@ -430,7 +469,17 @@ struct MainView: View {
                             cardGridViewModel.cards[lastMove.to.row][lastMove.to.col] = lastMove.toCard
                         }
                     },
-                    canUndo: canUndo
+                    onRedoTap: {
+                        print("Redo button tapped")
+                        if let lastMove = moveHistoryViewModel.redoLastMove() {
+                            print("Redoing move from (\(lastMove.from.row), \(lastMove.from.col)) to (\(lastMove.to.row), \(lastMove.to.col))")
+                            // Restore both cards to their swapped positions
+                            cardGridViewModel.cards[lastMove.from.row][lastMove.from.col] = lastMove.toCard
+                            cardGridViewModel.cards[lastMove.to.row][lastMove.to.col] = lastMove.fromCard
+                        }
+                    },
+                    canUndo: canUndo,
+                    canRedo: moveHistoryViewModel.canRedo
                 )
                 .safeAreaInset(edge: .bottom) {
                     Color.clear.frame(height: 0)
