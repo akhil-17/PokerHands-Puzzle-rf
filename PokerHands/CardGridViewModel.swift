@@ -41,6 +41,7 @@ class CardGridViewModel: ObservableObject {
     }
     
     private func shuffleInitialState() {
+        print("\n=== Starting shuffleInitialState ===")
         // Get all cards from the current state
         var allCards: [Card] = []
         for row in 0..<5 {
@@ -50,22 +51,89 @@ class CardGridViewModel: ObservableObject {
                 }
             }
         }
+        print("Total cards to place: \(allCards.count)")
         
-        // Shuffle the cards
-        allCards.shuffle()
+        // Try different placements to find one with minimal satisfied conditions
+        let maxAttempts = 100
+        var attempts = 0
+        var bestLayout: [[Card?]]? = nil
+        var minSatisfiedConditions = Int.max
         
-        // Place cards back in random positions
+        while attempts < maxAttempts {
+            print("\nAttempt \(attempts + 1):")
+            // Shuffle the cards
+            allCards.shuffle()
+            
+            // Try to place cards
+            let newLayout = placeCardsRandomly(allCards)
+            
+            // Count satisfied conditions
+            var satisfiedConditions = 0
+            var satisfiedRows: [Int] = []
+            var satisfiedColumns: [Int] = []
+            
+            // Check all rows
+            for row in 0..<5 {
+                let rowCards = newLayout[row]
+                let condition = rowConditions[row]
+                if isConditionSatisfied(cards: rowCards, condition: condition) {
+                    satisfiedConditions += 1
+                    satisfiedRows.append(row)
+                    print("Row \(row) satisfies condition: \(formatCondition(condition))")
+                    print("Row cards: \(rowCards.compactMap { $0 }.map { "\($0.suit) \($0.rank)" })")
+                }
+            }
+            
+            // Check all columns
+            for col in 0..<5 {
+                let columnCards = getColumn(newLayout, col)
+                let condition = columnConditions[col]
+                if isConditionSatisfied(cards: columnCards, condition: condition) {
+                    satisfiedConditions += 1
+                    satisfiedColumns.append(col)
+                    print("Column \(col) satisfies condition: \(formatCondition(condition))")
+                    print("Column cards: \(columnCards.compactMap { $0 }.map { "\($0.suit) \($0.rank)" })")
+                }
+            }
+            
+            print("Total satisfied conditions: \(satisfiedConditions)")
+            
+            // Update best layout if we found one with fewer satisfied conditions
+            if satisfiedConditions < minSatisfiedConditions {
+                minSatisfiedConditions = satisfiedConditions
+                bestLayout = newLayout
+                print("New best layout found with \(satisfiedConditions) satisfied conditions!")
+            }
+            
+            attempts += 1
+        }
+        
+        // Use the best layout we found
+        if let bestLayout = bestLayout {
+            print("\nUsing best layout with \(minSatisfiedConditions) satisfied conditions")
+            cards = bestLayout
+        } else {
+            print("\nNo valid layout found, falling back to random placement")
+            cards = placeCardsRandomly(allCards)
+        }
+    }
+    
+    private func getColumn(_ layout: [[Card?]], _ col: Int) -> [Card?] {
+        return [layout[0][col], layout[1][col], layout[2][col], layout[3][col], layout[4][col]]
+    }
+    
+    private func placeCardsRandomly(_ allCards: [Card]) -> [[Card?]] {
+        var newLayout = Array(repeating: Array(repeating: nil as Card?, count: 5), count: 5)
         var cardIndex = 0
         for row in 0..<5 {
             for col in 0..<5 {
                 if cardIndex < allCards.count {
-                    cards[row][col] = allCards[cardIndex]
+                    newLayout[row][col] = allCards[cardIndex]
                     cardIndex += 1
-                } else {
-                    cards[row][col] = nil
                 }
             }
         }
+        return newLayout
     }
     
     private func hasDuplicateCards() -> Bool {
